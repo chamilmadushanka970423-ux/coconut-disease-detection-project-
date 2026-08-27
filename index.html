@@ -1,0 +1,702 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cocoshield AI: Coconut Health Diagnostics</title>
+  
+  <!-- SEO Meta Tags -->
+  <meta name="description" content="A fully client-side, browser-based deep learning application for diagnosing Weligama Coconut Leaf Wilt Disease and Coconut Caterpillar Infestation using MobileNetV2.">
+  <meta name="theme-color" content="#10b981">
+  
+  <!-- Web App Manifest & Apple Mobile Support -->
+  <link rel="manifest" href="manifest.json">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="apple-touch-icon" href="icon-192.png">
+  
+  <!-- Stylesheets -->
+  <link rel="stylesheet" href="style.css">
+  
+  <!-- TensorFlow.js Library (bundled locally for offline/file:// support) -->
+  <script src="tf.min.js"></script>
+  <!-- Embedded model weights for file:// protocol (no fetch needed) -->
+  <script src="model-data.js"></script>
+</head>
+<body>
+
+  <div class="app-container">
+    <!-- Sidebar Navigation -->
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-icon" style="background: transparent; box-shadow: none;">
+          <!-- Logo Image -->
+          <img src="logo.png" alt="Cocoshield Logo" style="width: 100%; height: 100%; object-fit: contain; border-radius: var(--radius-md);">
+        </div>
+        <span class="brand-name">Cocoshield AI</span>
+      </div>
+      
+      <nav class="nav-container">
+        <ul class="nav-menu">
+          <li class="nav-item">
+            <a class="nav-link active" data-tab="diagnostics">
+              <svg viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+              <span class="nav-label">Workspace</span>
+            </a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" data-tab="analytics">
+              <svg viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+              <span class="nav-label">Metrics</span>
+            </a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" data-tab="library">
+              <svg viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+              <span class="nav-label">Guide</span>
+            </a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" data-tab="offline-guide">
+              <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              <span class="nav-label">Offline</span>
+            </a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" data-tab="settings">
+              <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+              <span class="nav-label">Logs</span>
+            </a>
+          </li>
+        </ul>
+      </nav>
+      
+      <div class="sidebar-footer">
+        <div class="pwa-status-badge">
+          <span class="status-dot" id="pwa-badge"></span>
+          <span id="pwa-status-text">Standard Mode</span>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main Content Panel -->
+    <main class="main-content">
+      
+      <!-- 1. DIAGNOSTICS TAB PANEL -->
+      <section class="tab-panel active" id="diagnostics">
+        <header class="page-header">
+          <h1 class="page-title">Diagnostics Workspace</h1>
+          <p class="page-subtitle">Capture or upload coconut leaves to diagnose infections entirely in your browser.</p>
+        </header>
+
+        <div class="card-grid">
+          <!-- Image Loading Zone -->
+          <div class="card col-6">
+            <div class="scanner-container">
+              <h2>Leaf Image Feed</h2>
+              
+              <div class="upload-zone" id="upload-zone">
+                <div class="upload-icon">
+                  <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                    <circle cx="8.5" cy="8.5" r="1.5"/>
+                    <polyline points="21 15 16 10 5 21"/>
+                  </svg>
+                </div>
+                <div class="upload-text">
+                  <h3>Select or Drop Image</h3>
+                  <p>Click here to choose file, or drag and drop leaf photo</p>
+                </div>
+                <input type="file" id="file-input" class="hidden-input" accept="image/*">
+                
+                <!-- Live preview & Video camera stream -->
+                <div class="preview-container" id="preview-container">
+                  <img src="" id="preview-img" class="preview-image" alt="Leaf preview" style="display:none;">
+                  <video id="camera-feed" class="camera-feed" autoplay playsinline style="display:none;"></video>
+                  <div class="scan-overlay" id="scan-overlay"></div>
+                  <div class="scan-line" id="scan-line"></div>
+                </div>
+              </div>
+              
+              <!-- Feature 1: Image Quality Feedback Bar -->
+              <div id="image-quality-feedback" style="display:none;"></div>
+              
+              <div class="action-controls">
+                <button class="btn btn-secondary" id="btn-camera">
+                  <svg viewBox="0 0 24 24" stroke="currentColor"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+                  Use Camera
+                </button>
+                <button class="btn btn-secondary" id="btn-upload" onclick="document.getElementById('file-input').click()">
+                  <svg viewBox="0 0 24 24" stroke="currentColor"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                  Upload File
+                </button>
+                <button class="btn btn-primary" id="btn-scan" disabled>
+                  <svg viewBox="0 0 24 24" stroke="currentColor"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+                  Diagnose
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Inference Result Column -->
+          <div class="card col-6" style="min-height: 400px;">
+            <h2>Diagnostic Report</h2>
+            
+            <!-- Result Placeholder state -->
+            <div id="result-placeholder" style="display:flex; flex-direction:column; align-items:center; justify-content:center; height:100%; text-align:center; padding: 2rem;">
+              <svg width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="var(--glass-border)" stroke-width="1.5">
+                <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+              </svg>
+              <h3 style="margin-top:1.5rem; color:var(--text-muted);">No Active Image Scan</h3>
+              <p style="color:var(--text-muted); font-size:0.85rem; max-width:280px; margin-top:0.5rem;">Load a coconut leaf photograph and click the Diagnose button to run in-browser AI classification.</p>
+            </div>
+            
+            <!-- Active Result card -->
+            <div id="result-card" style="display:none; margin-top: 1rem;">
+              <div class="result-card-content">
+                <div class="radial-gauge-container">
+                  <svg class="gauge-svg" viewBox="0 0 160 160">
+                    <circle class="gauge-track" cx="80" cy="80" r="70"></circle>
+                    <circle class="gauge-fill" id="gauge-fill" cx="80" cy="80" r="70"></circle>
+                  </svg>
+                  <div class="gauge-center-text">
+                    <span class="gauge-value" id="gauge-value">0%</span>
+                    <span class="gauge-label">Confidence</span>
+                  </div>
+                </div>
+                
+                <span class="prediction-badge" id="result-badge">Healthy</span>
+                
+                <div>
+                  <h3 id="result-condition-name" style="font-size: 1.5rem; color:var(--text-main);">Condition Title</h3>
+                  <p id="result-scientific-name" class="disease-scientific">Scientific Classification</p>
+                  <p id="result-description" class="disease-desc" style="margin-top: 0.75rem;">Description snippet goes here.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Detailed Treatment Advisory Section (Shown when diagnosis is active) -->
+          <div class="card col-12" id="advisory-card-wrapper" style="display: none;">
+            <div class="advisory-card">
+              <h2 class="advisory-title">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><circle cx="12" cy="11" r="3"/><line x1="12" y1="14" x2="12" y2="17"/></svg>
+                Sri Lankan CRI Management & Prevention Advisory
+                <span class="verified-badge" id="verified-badge"><span class="verified-icon">🛡️</span> Sources Verified</span>
+              </h2>
+              
+              <div class="card-grid" style="margin-bottom:0;">
+                <div class="col-6">
+                  <div class="advisory-section">
+                    <span class="advisory-section-title">Key Symptoms Check</span>
+                    <ul class="advisory-bullets" id="result-symptoms">
+                      <li>Symptom check bullet points.</li>
+                    </ul>
+                  </div>
+                </div>
+                
+                <div class="col-6">
+                  <div class="advisory-section">
+                    <span class="advisory-section-title">CRI Treatment Protocols</span>
+                    <ul class="advisory-bullets" id="result-treatments">
+                      <li>Recommended agricultural guidelines.</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+              
+              <!-- Feature 4: Source Citations -->
+              <div class="source-citations" id="result-sources">
+                <div class="citations-title">🔬 Verified Data Sources</div>
+                <!-- Dynamically populated via app.js -->
+              </div>
+            </div>
+          </div>
+          
+          <!-- Class probabilities breakdowns -->
+          <div class="card col-12" id="probabilities-wrapper" style="display: none;">
+            <h2>Multi-Class Output Distribution</h2>
+            <p class="disease-scientific" style="margin-bottom:1.5rem;">Softmax activation vector outputs from MobileNetV2 dense layer.</p>
+            <div class="prob-list" id="prob-list">
+              <!-- Dynamically populated via app.js -->
+            </div>
+          </div>
+          
+        </div>
+      </section>
+
+      
+      <!-- 2. ANALYTICS & PERFORMANCE TAB PANEL -->
+      <section class="tab-panel" id="analytics">
+        <header class="page-header">
+          <h1 class="page-title">Performance Analytics</h1>
+          <p class="page-subtitle">Detailed evaluation metrics of the MobileNetV2 network trained on 5,139 images.</p>
+        </header>
+
+        <div class="card-grid">
+          <!-- Training / Validation Curves -->
+          <div class="card col-6">
+            <h2>Accuracy Convergence Curve</h2>
+            <p class="disease-scientific">In-memory fine-tuning over 10 epochs (Validation: 98.83%)</p>
+            <div class="chart-container" id="accuracy-chart-container">
+              <!-- SVG plotted dynamically via app.js -->
+            </div>
+            <div class="chart-legend">
+              <div class="legend-item">
+                <span class="legend-line train"></span>
+                <span>Training Accuracy</span>
+              </div>
+              <div class="legend-item">
+                <span class="legend-line val"></span>
+                <span>Validation Accuracy</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Confusion Matrix Heatmap -->
+          <div class="card col-6">
+            <h2>Confusion Matrix</h2>
+            <p class="disease-scientific">Validation predictions grid comparing true classes to model outputs.</p>
+            <div class="matrix-container" id="matrix-container">
+              <!-- Matrix grid rendered via app.js -->
+            </div>
+            <p class="disease-desc" style="font-size:0.75rem; text-align:center; margin-top:1rem; color:var(--text-muted);">
+              C1: CCI_Caterpillars | C2: CCI_Leaflets | C3: Healthy | C4: WCLWD_Drying | C5: WCLWD_Flaccidity | C6: WCLWD_Yellowing
+            </p>
+          </div>
+
+          <!-- Per-Class Metrics Table -->
+          <div class="card col-12">
+            <h2>Precision, Recall & F1-Score Breakdown</h2>
+            <p class="disease-scientific">Detailed mathematical evaluation criteria across symptom-specific classes.</p>
+            <div class="table-container">
+              <table class="metrics-table">
+                <thead>
+                  <tr>
+                    <th>Target Classification</th>
+                    <th>Precision (Falses Penalty)</th>
+                    <th>Recall (Misses Penalty)</th>
+                    <th>F1-Score (Harmonic Mean)</th>
+                  </tr>
+                </thead>
+                <tbody id="metrics-tbody">
+                  <!-- Populated via app.js -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+          
+          <!-- Feature 2: Performance Benchmark Section -->
+          <div class="card col-12">
+            <h2>Comparative Performance Benchmark</h2>
+            <p class="disease-scientific">Measures inference latency across multiple runs to assess mid-range device usability in field conditions.</p>
+            
+            <div class="model-arch-grid" id="model-arch-grid">
+              <div class="arch-item">
+                <span class="arch-label">Architecture</span>
+                <span class="arch-value">MobileNetV2</span>
+              </div>
+              <div class="arch-item">
+                <span class="arch-label">Input Shape</span>
+                <span class="arch-value">224×224×3</span>
+              </div>
+              <div class="arch-item">
+                <span class="arch-label">Parameters</span>
+                <span class="arch-value" id="param-count">~2.3M</span>
+              </div>
+              <div class="arch-item">
+                <span class="arch-label">Model Size</span>
+                <span class="arch-value" id="model-file-size">~8.7 MB</span>
+              </div>
+              <div class="arch-item">
+                <span class="arch-label">Output Classes</span>
+                <span class="arch-value">6</span>
+              </div>
+              <div class="arch-item">
+                <span class="arch-label">Backend</span>
+                <span class="arch-value" id="bench-backend">WebGL</span>
+              </div>
+            </div>
+            
+            <div class="benchmark-controls">
+              <button class="benchmark-btn" id="btn-benchmark" disabled>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                Run Latency Benchmark (10 passes)
+              </button>
+              <span class="disease-scientific" id="benchmark-status">Model must be loaded first</span>
+            </div>
+            
+            <div class="benchmark-card" id="benchmark-results" style="display:none;">
+              <div class="benchmark-stat">
+                <span class="stat-value" id="bench-mean">—</span>
+                <span class="stat-label">Mean Latency (ms)</span>
+              </div>
+              <div class="benchmark-stat">
+                <span class="stat-value" id="bench-min">—</span>
+                <span class="stat-label">Min Latency (ms)</span>
+              </div>
+              <div class="benchmark-stat">
+                <span class="stat-value" id="bench-max">—</span>
+                <span class="stat-label">Max Latency (ms)</span>
+              </div>
+              <div class="benchmark-stat">
+                <span class="stat-value" id="bench-p95">—</span>
+                <span class="stat-label">P95 Latency (ms)</span>
+              </div>
+              <div class="benchmark-stat">
+                <span class="stat-value" id="bench-memory">—</span>
+                <span class="stat-label">GPU Memory (MB)</span>
+              </div>
+              <div class="benchmark-stat">
+                <span class="stat-value" id="bench-tensors">—</span>
+                <span class="stat-label">Active Tensors</span>
+              </div>
+            </div>
+            
+            <div class="device-rating" id="device-rating" style="display:none;">
+              <span class="rating-icon" id="rating-icon">📱</span>
+              <div class="rating-text">
+                <span class="rating-title" id="rating-title">Assessing...</span>
+                <span class="rating-desc" id="rating-desc">Run the benchmark to evaluate device suitability for field deployment.</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+
+      <!-- 3. FIELD GUIDE / GLOSSARY TAB PANEL -->
+      <section class="tab-panel" id="library">
+        <header class="page-header">
+          <h1 class="page-title">Field Library</h1>
+          <p class="page-subtitle">Learn to identify symptoms and read biological indicators for Sri Lankan coconut crops.</p>
+        </header>
+
+        <div class="disease-grid">
+          
+          <!-- Card 1: Healthy -->
+          <div class="disease-card">
+            <div class="disease-card-header">
+              <span class="disease-card-title">Healthy Fronds</span>
+              <span class="disease-card-badge control">Control</span>
+            </div>
+            <div class="disease-card-body">
+              <span class="disease-scientific">Cocos nucifera</span>
+              <p class="disease-desc">Healthy green leaf tissue indicates optimal nitrogen and magnesium absorption and robust photosynthetic function. Standard baseline for checking crop health indices.</p>
+              <div class="disease-symptoms-list">
+                <span class="disease-symptom-tag">Flat, rigid leaflets</span>
+                <span class="disease-symptom-tag">Even dark green color</span>
+                <span class="disease-symptom-tag">Intact margins and petioles</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Card 2: CCI caterpillars -->
+          <div class="disease-card">
+            <div class="disease-card-header">
+              <span class="disease-card-title">Caterpillar Presence</span>
+              <span class="disease-card-badge cci">CCI Infestation</span>
+            </div>
+            <div class="disease-card-body">
+              <span class="disease-scientific">Opisina arenosella (Larvae)</span>
+              <p class="disease-desc">Active coconut caterpillars feeding on leaflet tissues. They construct protective web tunnels made of silk and feces on the undersides of leaflets, hiding from sunlight.</p>
+              <div class="disease-symptoms-list">
+                <span class="disease-symptom-tag">Greenish-brown larvae</span>
+                <span class="disease-symptom-tag">White/grey silken tunnels</span>
+                <span class="disease-symptom-tag">Scraped brown feeding tracks</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Card 3: CCI Damage leaflets -->
+          <div class="disease-card">
+            <div class="disease-card-header">
+              <span class="disease-card-title">Caterpillar Leaflet Damage</span>
+              <span class="disease-card-badge cci">CCI Damage</span>
+            </div>
+            <div class="disease-card-body">
+              <span class="disease-scientific">Opisina arenosella (Scorched Sign)</span>
+              <p class="disease-desc">Advanced leaflet damage signature caused by larvae feeding. Leaves lose moisture, skeletonize, turn completely greyish-brown, and curl up. Fronds get a burnt appearance.</p>
+              <div class="disease-symptoms-list">
+                <span class="disease-symptom-tag">Scorched brown appearance</span>
+                <span class="disease-symptom-tag">Skeletonized leaf structure</span>
+                <span class="disease-symptom-tag">Papery, fragile dead leaflets</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Card 4: WCLWD yellowing -->
+          <div class="disease-card">
+            <div class="disease-card-header">
+              <span class="disease-card-title">WCLWD Leaflet Yellowing</span>
+              <span class="disease-card-badge wclwd">WCLWD Yellowing</span>
+            </div>
+            <div class="disease-card-body">
+              <span class="disease-scientific">Phytoplasma (Chlorosis Vector)</span>
+              <p class="disease-desc">Characterized by intense chlorosis (yellowing) starting at the leaflet tips and extending inwards. WCLWD-associated yellowing typically starts on middle-tier fronds.</p>
+              <div class="disease-symptoms-list">
+                <span class="disease-symptom-tag">Tip-to-base yellowing</span>
+                <span class="disease-symptom-tag">Affects middle and lower fronds</span>
+                <span class="disease-symptom-tag">Accompanied by leaflet flaccidity</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Card 5: WCLWD Flaccidity -->
+          <div class="disease-card">
+            <div class="disease-card-header">
+              <span class="disease-card-title">WCLWD Leaflet Flaccidity</span>
+              <span class="disease-card-badge wclwd">WCLWD Drooping</span>
+            </div>
+            <div class="disease-card-body">
+              <span class="disease-scientific">Phytoplasma (Droop Sign)</span>
+              <p class="disease-desc">Loss of cell turgor pressure caused by Phytoplasma vascular disruption. Leaflets fold along the midrib and droop downwards, resembling a rib-cage structure.</p>
+              <div class="disease-symptoms-list">
+                <span class="disease-symptom-tag">Saucer-like curved leaflets</span>
+                <span class="disease-symptom-tag">Bending along vertical axis</span>
+                <span class="disease-symptom-tag">Loss of leaflet rigidity</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Card 6: WCLWD Drying -->
+          <div class="disease-card">
+            <div class="disease-card-header">
+              <span class="disease-card-title">WCLWD Advanced Drying</span>
+              <span class="disease-card-badge wclwd">WCLWD Drying</span>
+            </div>
+            <div class="disease-card-body">
+              <span class="disease-scientific">Phytoplasma (Vascular Collapse)</span>
+              <p class="disease-desc">Final stages of Leaf Wilt disease where tissues die off completely. The stalks weaken at the petiole attachment point, causing the whole frond to snap and hang down.</p>
+              <div class="disease-symptoms-list">
+                <span class="disease-symptom-tag">Snapped petioles</span>
+                <span class="disease-symptom-tag">Hanging dead leaves at trunk</span>
+                <span class="disease-symptom-tag">Severe crop canopy drop</span>
+              </div>
+            </div>
+          </div>
+          
+        </div>
+      </section>
+
+      
+      <!-- 3b. OFFLINE DISTRIBUTION GUIDE TAB PANEL -->
+      <section class="tab-panel" id="offline-guide">
+        <header class="page-header">
+          <h1 class="page-title">Offline Distribution Guide</h1>
+          <p class="page-subtitle">Cocoshield AI runs entirely in your browser — no internet, no server, no installation. Just copy the folder and open <code>index.html</code>.</p>
+        </header>
+
+        <div class="guide-container">
+          
+          <!-- Section 1: The Complete File Bundle -->
+          <div class="guide-section">
+            <h2 class="guide-section-title">
+              <span class="step-number">1</span>
+              The Complete File Bundle
+            </h2>
+            <div class="guide-steps">
+              <div class="guide-step">
+                <span class="step-icon">📦</span>
+                <div class="step-content">
+                  <span class="step-title">Everything is self-contained in one folder</span>
+                  <span class="step-desc">The entire application — including the TensorFlow.js AI library and all MobileNetV2 model weights — is bundled inside the <code>coconut_web_model</code> folder. No internet connection is required at any point. No software needs to be installed.</span>
+                </div>
+              </div>
+              <div class="guide-step">
+                <span class="step-icon">📋</span>
+                <div class="step-content">
+                  <span class="step-title">Copy the entire folder — never move files individually</span>
+                  <span class="step-desc">Select the complete <code>coconut_web_model</code> folder and copy it to any location — USB drive, SD card, laptop, or desktop. The folder can be placed anywhere on any drive letter or path. All file references are relative, so the location does not matter.</span>
+                </div>
+              </div>
+            </div>
+            
+            <div class="file-tree">
+              <span class="tree-folder">📁 coconut_web_model/</span><br>
+              ├── <span class="tree-important">index.html</span> (Main application — double-click this)<br>
+              ├── <span class="tree-important">app.js</span> (AI engine &amp; logic)<br>
+              ├── <span class="tree-important">tf.min.js</span> (TensorFlow.js library — bundled locally)<br>
+              ├── <span class="tree-important">model-data.js</span> (MobileNetV2 weights — embedded as data)<br>
+              ├── <span class="tree-file">style.css</span> (Visual design)<br>
+              ├── <span class="tree-file">sw.js</span> (Service worker for http:// mode)<br>
+              ├── <span class="tree-file">manifest.json</span> (PWA configuration)<br>
+              ├── <span class="tree-file">icon-192.png</span><br>
+              ├── <span class="tree-file">icon-512.png</span><br>
+              └── <span class="tree-folder">📁 kaggle/working/tfjs_model/</span><br>
+              &nbsp;&nbsp;&nbsp;&nbsp;├── <span class="tree-file">model.json</span> (Network graph definition)<br>
+              &nbsp;&nbsp;&nbsp;&nbsp;├── <span class="tree-file">group1-shard1of3.bin</span> (Weights ~4MB)<br>
+              &nbsp;&nbsp;&nbsp;&nbsp;├── <span class="tree-file">group1-shard2of3.bin</span> (Weights ~4MB)<br>
+              &nbsp;&nbsp;&nbsp;&nbsp;└── <span class="tree-file">group1-shard3of3.bin</span> (Weights ~0.7MB)
+            </div>
+          </div>
+
+          <!-- Section 2: USB / SD Card Distribution -->
+          <div class="guide-section">
+            <h2 class="guide-section-title">
+              <span class="step-number">2</span>
+              USB Drive / SD Card Distribution
+            </h2>
+            <div class="guide-steps">
+              <div class="guide-step">
+                <span class="step-icon">💾</span>
+                <div class="step-content">
+                  <span class="step-title">Insert a USB drive or SD card</span>
+                  <span class="step-desc">Use any USB flash drive or micro SD card with at least <strong>25 MB</strong> of free space. Format to FAT32 or NTFS for maximum device compatibility.</span>
+                </div>
+              </div>
+              <div class="guide-step">
+                <span class="step-icon">📤</span>
+                <div class="step-content">
+                  <span class="step-title">Copy the entire project folder</span>
+                  <span class="step-desc">Paste the complete <code>coconut_web_model</code> folder onto the USB or SD card. Do not rename the folder or move files out of it — all paths are relative to the folder root.</span>
+                </div>
+              </div>
+              <div class="guide-step">
+                <span class="step-icon">🌴</span>
+                <div class="step-content">
+                  <span class="step-title">Distribute to farmers and agricultural officers</span>
+                  <span class="step-desc">Hand the USB drive to field workers. On the target device, open the <code>coconut_web_model</code> folder and double-click <code>index.html</code>. The AI diagnostic system starts immediately — no setup, no installation, no internet needed.</span>
+                </div>
+              </div>
+            </div>
+            
+            <div class="guide-callout info">
+              <span class="callout-icon">💡</span>
+              <span class="callout-text">The total application size is approximately <strong>25 MB</strong> — including the bundled TensorFlow.js library, embedded model weights, and all application files. It fits on any modern USB drive or SD card.</span>
+            </div>
+          </div>
+
+          <!-- Section 3: Running Without Internet -->
+          <div class="guide-section">
+            <h2 class="guide-section-title">
+              <span class="step-number">3</span>
+              Running Without Internet
+            </h2>
+            <div class="guide-steps">
+              <div class="guide-step">
+                <span class="step-icon">🖱️</span>
+                <div class="step-content">
+                  <span class="step-title">Double-click <code>index.html</code> — that's it</span>
+                  <span class="step-desc">Open the <code>coconut_web_model</code> folder and double-click <code>index.html</code>. The app opens in your browser with <strong>all features fully working</strong>: AI diagnosis, image upload, and live camera capture. No Python, no server, no internet connection required at any stage.</span>
+                </div>
+              </div>
+              <div class="guide-step">
+                <span class="step-icon">📱</span>
+                <div class="step-content">
+                  <span class="step-title">On Android / Mobile Devices</span>
+                  <span class="step-desc">Connect the USB drive via an OTG adapter, copy the <code>coconut_web_model</code> folder to internal storage, then open <code>index.html</code> using a file manager that can launch it in Chrome. All AI inference and camera features work directly.</span>
+                </div>
+              </div>
+            </div>
+            
+            <div class="guide-callout success">
+              <span class="callout-icon">✅</span>
+              <span class="callout-text"><strong>No server required.</strong> The TensorFlow.js library (<code>tf.min.js</code>) and all MobileNetV2 model weights (<code>model-data.js</code>) are bundled locally inside the folder. The browser loads them directly — no network requests are made at any point during diagnosis.</span>
+            </div>
+          </div>
+
+          <!-- Section 4: Updating the App -->
+          <div class="guide-section">
+            <h2 class="guide-section-title">
+              <span class="step-number">4</span>
+              Updating the Application
+            </h2>
+            <div class="guide-steps">
+              <div class="guide-step">
+              <div class="guide-step">
+                <span class="step-icon">📥</span>
+                <div class="step-content">
+                  <span class="step-title">Manual update for USB-distributed copies</span>
+                  <span class="step-desc">Download the latest version of the <code>coconut_web_model</code> folder from the project source. Replace all files on the USB drive. Distribute the updated USB to field workers.</span>
+                </div>
+              </div>
+            </div>
+            
+            <div class="guide-callout success">
+              <span class="callout-icon">✅</span>
+              <span class="callout-text">Once cached by the Service Worker, the app works <strong>completely offline</strong> — including AI inference, camera capture, and all diagnostic features. No data is ever sent to external servers.</span>
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+      
+      <!-- 4. DEVELOPER CONSOLE & SETTINGS PANEL -->
+      <section class="tab-panel" id="settings">
+        <header class="page-header">
+          <h1 class="page-title">Developer Console</h1>
+          <p class="page-subtitle">Configure model execution settings and view runtime diagnostic logs.</p>
+        </header>
+
+        <div class="card-grid">
+          <div class="card col-12">
+            <h2>Hardware & Model Parameters</h2>
+            
+            <div class="settings-row">
+              <div>
+                <strong>Computation Backend</strong>
+                <p class="disease-scientific" style="margin-top: 0.15rem;">Select hardware acceleration engine for TensorFlow.js.</p>
+              </div>
+              <div>
+                <select class="select-control" id="backend-select" onchange="tf.setBackend(this.value).then(() => appLog('Backend switched to ' + this.value, 'success'))">
+                  <option value="webgl">WebGL (GPU Accelerated)</option>
+                  <option value="cpu">CPU (Standard Engine)</option>
+                </select>
+              </div>
+            </div>
+            
+            <div class="settings-row">
+              <div>
+                <strong>Service Worker Status</strong>
+                <p class="disease-scientific" style="margin-top: 0.15rem;">Verifies offline PWA assets caching.</p>
+              </div>
+              <div id="sw-status-panel">
+                <button class="btn btn-secondary" style="padding:0.4rem 1rem; font-size:0.8rem;" onclick="navigator.serviceWorker.getRegistrations().then(r => r.forEach(reg => reg.update().then(() => appLog('Cache assets refreshed', 'success'))))">
+                  Force Cache Refresh
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div class="card col-12">
+            <h2>Live Execution Logs</h2>
+            <p class="disease-scientific">Output stream from the neural network classifier.</p>
+            <div class="console-box" id="console-log">
+              <!-- Logs populated via app.js -->
+            </div>
+          </div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- Interactive custom tooltip box -->
+  <div class="tooltip-box" id="tooltip-box">Tooltip text</div>
+
+  <!-- Main logic script -->
+  <script src="app.js"></script>
+
+  <!-- PWA Installation Registration Trigger -->
+  <script>
+    // Trigger layout wrapper show/hide on prediction result triggers
+    const observer = new MutationObserver(() => {
+      const resultCard = document.getElementById("result-card");
+      const advisoryWrapper = document.getElementById("advisory-card-wrapper");
+      const probabilitiesWrapper = document.getElementById("probabilities-wrapper");
+      
+      if (resultCard.style.display === "block") {
+        advisoryWrapper.style.display = "block";
+        probabilitiesWrapper.style.display = "block";
+      } else {
+        advisoryWrapper.style.display = "none";
+        probabilitiesWrapper.style.display = "none";
+      }
+    });
+    
+    observer.observe(document.getElementById("result-card"), { attributes: true, attributeFilter: ["style"] });
+  </script>
+</body>
+</html>
